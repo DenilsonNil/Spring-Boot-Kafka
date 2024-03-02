@@ -10,6 +10,7 @@ import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Service
 @Slf4j
@@ -26,7 +27,7 @@ public class LibraryEventsProducer {
         this.objectMapper = objectMapper;
     }
 
-    public CompletableFuture<SendResult<Integer, String>> sendLibraryEvent(LibraryEvent libraryEvent)  {
+    public CompletableFuture<SendResult<Integer, String>> sendAsyncLibraryEvent(LibraryEvent libraryEvent)  {
         var key = libraryEvent.libraryEventId();
         String value;
 
@@ -38,6 +39,24 @@ public class LibraryEventsProducer {
 
         var completableFuture = kafkaTemplate.send(topic, key, value);
         return processLibraryEvent(key, value, completableFuture);
+    }
+
+    public SendResult<Integer, String> sendSyncLibraryEvent(LibraryEvent libraryEvent)  {
+        var key = libraryEvent.libraryEventId();
+        String value;
+        SendResult<Integer, String> sendResult;
+
+        try {
+            value = objectMapper.writeValueAsString(libraryEvent);
+            sendResult = kafkaTemplate.send(topic, key, value).get();
+        } catch (JsonProcessingException | InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+
+        handleSuccess(key, value, sendResult);
+
+
+        return sendResult;
     }
 
     private CompletableFuture<SendResult<Integer, String>> processLibraryEvent(Integer key, String value, CompletableFuture<SendResult<Integer, String>> completableFuture) {

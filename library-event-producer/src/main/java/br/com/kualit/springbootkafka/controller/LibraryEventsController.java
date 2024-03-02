@@ -21,7 +21,7 @@ public class LibraryEventsController {
     public ResponseEntity<LibraryEvent> postLibraryEvent(@RequestBody LibraryEvent libraryEvent) {
 
         log.info("libraryEvent : {}", libraryEvent);
-        producer.sendLibraryEvent(libraryEvent);
+        producer.sendAsyncLibraryEvent(libraryEvent);
         return ResponseEntity.status(HttpStatus.CREATED).body(libraryEvent);
     }
 
