@@ -4,11 +4,16 @@ import br.com.kualit.springbootkafka.domain.LibraryEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -54,9 +59,28 @@ public class LibraryEventsProducer {
         }
 
         handleSuccess(key, value, sendResult);
-
-
         return sendResult;
+    }
+
+
+    public CompletableFuture<SendResult<Integer, String>> sendAsyncLibraryEventWithProducerRecord(LibraryEvent libraryEvent)  {
+        var key = libraryEvent.libraryEventId();
+        String value;
+
+        try {
+            value = objectMapper.writeValueAsString(libraryEvent);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        var producerRecord = buildProducerRecord(key, value);
+        var completableFuture = kafkaTemplate.send(producerRecord);
+        return processLibraryEvent(key, value, completableFuture);
+    }
+
+    private ProducerRecord<Integer, String> buildProducerRecord(Integer key, String value) {
+        List<Header> headers = List.of(new RecordHeader("event-source", "scanner".getBytes()));
+        return new ProducerRecord<>(topic, null, key, value, headers);
     }
 
     private CompletableFuture<SendResult<Integer, String>> processLibraryEvent(Integer key, String value, CompletableFuture<SendResult<Integer, String>> completableFuture) {
