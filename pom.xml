@@ -5,6 +5,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>library-event-producer</module>
+        <module>library-event-consumer</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
